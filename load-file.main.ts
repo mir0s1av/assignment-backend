@@ -3,7 +3,7 @@ import fs from "fs";
 import { DateTime } from "luxon";
 import { getDBConnection } from "./db";
 import { parseAmount } from "./scraperUtils";
-import { GovUKData, GovUKDataSchema, SpendTransaction } from "./types";
+import { GovUKDataSchema, SpendTransaction } from "./types";
 import { parseDate, transformKeys } from "./utils";
 
 /**
@@ -13,7 +13,7 @@ import { parseDate, transformKeys } from "./utils";
  * Some basic validation is performed.
  */
 
-async function main(fileName: string) {
+async function main(fileName: string, batchSize: number = 100) {
   const csvPath = `./sample_data/${fileName}`;
 
   console.log(`Reading ${csvPath}.`);
@@ -29,40 +29,49 @@ async function main(fileName: string) {
   const knexDb = await getDBConnection();
 
   let rowNum = 1;
+  let batch: SpendTransaction[] = [];
+  let batchNumber = 0;
   for (const row of csvData.data) {
     try {
-      // Add more validation in the future?
-      console.log({ row });
+      const isLastRow = rowNum === csvData.data.length;
+
       const spendDataRow = GovUKDataSchema.parse(transformKeys(row));
-      console.log({ spendDataRow });
       // Some files have hundreds of rows with no data at the end, just commas.
       // It's safe to skip these.
       if (spendDataRow.entity === "") {
         continue;
       }
 
-      // TODO: We might have to support other date formats in the future
-      // See https://moment.github.io/luxon/#/parsing
       const isoTsp = parseDate(spendDataRow["date"]);
       if (!isoTsp) {
         throw new Error(
           `Invalid transaction timestamp ${spendDataRow["date"]}.`
         );
       }
-      console.log({ isoTsp });
+
       /**
        * Note that we're not specifying `id` here which will be automatically generated,
        * but knex complains about sqlite not supporting default values.
        * It's ok to ignore that warning.
        */
-      // TODO: Use .batchInsert to speed this up, it's really slow with > 1000 transactions!
-      await knexDb<SpendTransaction>("spend_transactions").insert({
+
+      batch.push({
         buyer_name: spendDataRow["entity"],
         supplier_name: spendDataRow["supplier"],
         amount: parseAmount(spendDataRow["amount"]),
         transaction_timestamp: isoTsp,
       });
+      if (batch.length >= batchSize) {
+        console.log(`Persisting batch #${batchNumber} :: ${batch.length}`);
+        await knexDb.batchInsert("spend_transactions", batch, batch.length);
+        batch = [];
+        batchNumber++;
+      }
+      if (isLastRow) {
+        console.log(`Persisting last batch ${batchNumber} ::  ${batch.length}`);
 
+        await knexDb.batchInsert("spend_transactions", batch, batch.length);
+      }
       ++rowNum;
     } catch (e) {
       // Re-throw all errors, but log some useful info
@@ -75,4 +84,4 @@ async function main(fileName: string) {
   await knexDb.destroy();
 }
 
-main("Transparency_DfE_Spend_July_2023__1_.csv");
+main("HMRC_spending_over_25000_for_August_2023.csv");

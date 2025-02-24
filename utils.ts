@@ -37,6 +37,7 @@ export const dateFormats = [
   "HH:mm:ss",
   "HH:mm:ss.SSS",
   "HH:mm:ss,SSS",
+  "dd/MM/yyyy",
 ];
 
 export function parseDate(dateStr: string) {
