@@ -84,4 +84,4 @@ async function main(fileName: string, batchSize: number = 100) {
   await knexDb.destroy();
 }
 
-main("HMRC_spending_over_25000_for_August_2023.csv");
+main("HMRC_spending_over_25000_for_December_2021.csv");

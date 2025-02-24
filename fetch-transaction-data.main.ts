@@ -36,16 +36,17 @@ async function main(url: string, year: number) {
       if (!fileUrl) {
         throw new Error(`No file found for ${month}-${year}`);
       }
-      const splitUrl = url.split("/");
-      const saveDir = path.join(
-        __dirname,
-        "sample_data",
-        splitUrl[splitUrl.length - 1],
-        year.toString()
-      );
-      await fs.mkdirSync(saveDir, { recursive: true });
+      //TODO: it might be better to sort files into different dirs based on the year and name
+      // const splitUrl = url.split("/");
+      // const saveDir = path.join(
+      //   __dirname,
+      //   "sample_data",
+      //   splitUrl[splitUrl.length - 1],
+      //   year.toString()
+      // );
+      // await fs.mkdirSync(saveDir, { recursive: true });
       const fileName = path.basename(fileUrl);
-      const savePath = path.join(saveDir, fileName);
+      const savePath = path.join("./sample_data", fileName);
 
       await downloadFile(fileUrl, savePath);
     }
