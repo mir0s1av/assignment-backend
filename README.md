@@ -100,3 +100,38 @@ If you just want to disable strict type checking, modify `tsconfig.json` accordi
 # Candidate's notes
 
 TODO: Add your notes here
+
+Completed tasks:
+
+1.  Tests are fixed
+2.  load-file.main is now parsing and loading data from provided files as well as supporting batching
+3.  api/top_suppliers POST request is not ready and working
+    example (` "top_suppliers": [
+    {
+        "name": "FUJITSU SERVICES LTD",
+        "total": 12735180.529999997
+    },
+    {
+        "name": "CAPGEMINI",
+        "total": 12668005.490000002
+    },
+    {
+        "name": "EQUAL EXPERTS UK LTD",
+        "total": 3883243.77
+    },
+    {
+        "name": "Amazon Web Services UK",
+        "total": 3726500.06
+    },
+    {
+        "name": "INTEGRATED DEBT SERVICES LTD T/AS",
+        "total": 3722464.23
+    }
+]`)
+
+TODO Tasks:
+
+1.  We need to verify the bpdy payload for the post request
+2.  Files saving can be improved, need to figure out what's the best approach (use name and year folders or just dump everything in one folder)
+3.  I ran out of time and was able only process data from HMRC_spending_over_25000 files
+4.  Need to figure out what is the best approach to read files data( can be done so it reads the whole folder rather than running files manually)
