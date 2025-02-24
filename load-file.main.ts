@@ -3,6 +3,8 @@ import fs from "fs";
 import { DateTime } from "luxon";
 import { getDBConnection } from "./db";
 import { parseAmount } from "./scraperUtils";
+import { GovUKData, GovUKDataSchema, SpendTransaction } from "./types";
+import { parseDate, transformKeys } from "./utils";
 
 /**
  * This script loads a csv file containg spending data in gov.uk/HMRC format
@@ -11,32 +13,8 @@ import { parseAmount } from "./scraperUtils";
  * Some basic validation is performed.
  */
 
-// Common data format of _some_ of the spend files.
-// Might have to support other formats in the future but this is ok for HMRC & DfT
-type GovUKData = {
-  "Department family": string;
-  Entity: string;
-  Date: string;
-  "Expense type": string;
-  "Expense area": string;
-  Supplier: string;
-  "Transaction number": string;
-  Amount: string;
-  Description: string;
-  "Supplier Postcode": string;
-};
-
-// Corresponds to the spend_transactions table in the database
-type SpendTransaction = {
-  buyer_name: string;
-  supplier_name: string;
-  amount: number;
-  transaction_timestamp: string; // should be iso format
-};
-
-async function main() {
-  // TODO: Pass this as an argument?
-  const csvPath = "./sample_data/Transparency_DfE_Spend_July_2023__1_.csv";
+async function main(fileName: string) {
+  const csvPath = `./sample_data/${fileName}`;
 
   console.log(`Reading ${csvPath}.`);
   const csvContent = fs.readFileSync(csvPath, { encoding: "utf8" });
@@ -54,26 +32,24 @@ async function main() {
   for (const row of csvData.data) {
     try {
       // Add more validation in the future?
-      const spendDataRow = row as GovUKData;
-
+      console.log({ row });
+      const spendDataRow = GovUKDataSchema.parse(transformKeys(row));
+      console.log({ spendDataRow });
       // Some files have hundreds of rows with no data at the end, just commas.
       // It's safe to skip these.
-      if (spendDataRow.Entity === "") {
+      if (spendDataRow.entity === "") {
         continue;
       }
 
       // TODO: We might have to support other date formats in the future
       // See https://moment.github.io/luxon/#/parsing
-      const isoTsp = DateTime.fromFormat(
-        spendDataRow["Date"],
-        "dd-MM-yyyy"
-      ).toISO();
+      const isoTsp = parseDate(spendDataRow["date"]);
       if (!isoTsp) {
         throw new Error(
-          `Invalid transaction timestamp ${spendDataRow["Date"]}.`
+          `Invalid transaction timestamp ${spendDataRow["date"]}.`
         );
       }
-
+      console.log({ isoTsp });
       /**
        * Note that we're not specifying `id` here which will be automatically generated,
        * but knex complains about sqlite not supporting default values.
@@ -81,9 +57,9 @@ async function main() {
        */
       // TODO: Use .batchInsert to speed this up, it's really slow with > 1000 transactions!
       await knexDb<SpendTransaction>("spend_transactions").insert({
-        buyer_name: spendDataRow["Entity"],
-        supplier_name: spendDataRow["Supplier"],
-        amount: parseAmount(spendDataRow["Amount"]),
+        buyer_name: spendDataRow["entity"],
+        supplier_name: spendDataRow["supplier"],
+        amount: parseAmount(spendDataRow["amount"]),
         transaction_timestamp: isoTsp,
       });
 
@@ -99,4 +75,4 @@ async function main() {
   await knexDb.destroy();
 }
 
-main();
+main("Transparency_DfE_Spend_July_2023__1_.csv");
