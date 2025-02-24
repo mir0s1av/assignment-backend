@@ -128,6 +128,14 @@ Completed tasks:
         "total": 3722464.23
     }
 ]`)
+4.  fetch-transaction-data.main is now fetching files from the internet and saves them into the system, to run the function please provide args as following
+
+```
+main(
+  "https://www.gov.uk/api/content/government/publications/dft-spending-over-25000",
+  2021 - this indicates starting year from which the data will be fetched
+)
+```
 
 TODO Tasks:
 
@@ -135,3 +143,4 @@ TODO Tasks:
 2.  Files saving can be improved, need to figure out what's the best approach (use name and year folders or just dump everything in one folder)
 3.  I ran out of time and was able only process data from HMRC_spending_over_25000 files
 4.  Need to figure out what is the best approach to read files data( can be done so it reads the whole folder rather than running files manually)
+5.  We can add checks for already existing files before fetching it from the internet.
