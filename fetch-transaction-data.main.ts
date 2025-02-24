@@ -4,6 +4,7 @@ import fs from "fs";
 
 async function downloadFile(url: string, savePath: string): Promise<void> {
   try {
+    console.log(`Downloading file: ${url}`);
     const response = await fetch(url);
     if (!response.ok)
       throw new Error(`Failed to fetch file: ${response.statusText}`);
@@ -19,11 +20,10 @@ async function downloadFile(url: string, savePath: string): Promise<void> {
 
 //TODO: it would be beneficial to run this process in parallel
 async function main(url: string, year: number) {
-  // TODO: Implement scraping spend data from gov.uk websites
   try {
     for (const month of months) {
       const apiUrl = `${url}-${month}-${year}`;
-      console.log({ apiUrl });
+
       const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch API: ${response.statusText}`);
@@ -36,15 +36,7 @@ async function main(url: string, year: number) {
       if (!fileUrl) {
         throw new Error(`No file found for ${month}-${year}`);
       }
-      //TODO: it might be better to sort files into different dirs based on the year and name
-      // const splitUrl = url.split("/");
-      // const saveDir = path.join(
-      //   __dirname,
-      //   "sample_data",
-      //   splitUrl[splitUrl.length - 1],
-      //   year.toString()
-      // );
-      // await fs.mkdirSync(saveDir, { recursive: true });
+
       const fileName = path.basename(fileUrl);
       const savePath = path.join("./sample_data", fileName);
 
