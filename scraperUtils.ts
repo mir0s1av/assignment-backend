@@ -6,7 +6,7 @@
  * @returns extracted amount as a number
  */
 export function parseAmount(text: string): number {
-  const amount = Number.parseFloat(text);
+  const amount = Number.parseFloat(text.replace(/[£$,]/g, ""));
   if (isNaN(amount)) {
     throw new Error(`Invalid amount format: ${text}.`);
   }
