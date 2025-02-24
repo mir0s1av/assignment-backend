@@ -61,3 +61,10 @@ export const months = [
   "november",
   "december",
 ];
+
+export function parseDateFromISO(date: string) {
+  return `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(
+    6,
+    8
+  )}`;
+}
