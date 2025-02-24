@@ -46,3 +46,18 @@ export function parseDate(dateStr: string) {
     if (dt.isValid) return dt.toISO();
   }
 }
+
+export const months = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
