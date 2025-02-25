@@ -144,3 +144,6 @@ TODO Tasks:
 3.  I ran out of time and was able only process data from HMRC_spending_over_25000 files
 4.  Need to figure out what is the best approach to read files data( can be done so it reads the whole folder rather than running files manually)
 5.  We can add checks for already existing files before fetching it from the internet.
+6.  `load-file.main` can run in synchronous mode allowing us watch a folder for newly added files and perform data injestion accordingly.
+7.  We can update `fetch-transaction-data` and implement a mode when files are fetched only for the provided year and not recursively.
+8.  use `createWriteStream` instead of `writeFileSync`
