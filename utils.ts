@@ -1,11 +1,24 @@
 import { DateTime } from "luxon";
+import { argNames } from "./types";
 
 export function transformKeys(obj: unknown) {
   if (typeof obj !== "object" || obj === null) {
     throw new Error("Invalid input: Expected an object.");
   }
   return Object.entries(obj).reduce((acc, [key, value]) => {
-    const newKey = key.toLowerCase().replace(" ", "_");
+    let newKey = key
+      .normalize("NFKD")
+      .replace(/[^\w\s]/gi, "")
+      .toLowerCase()
+      .trim()
+      .replace(" ", "_")
+      .replace("No", "number")
+      .replace("no", "number");
+    if (newKey === "") {
+      newKey = "amount";
+      value = value.replace(/[^\d.,]/g, "");
+    }
+
     acc[newKey] = value;
     return acc;
   }, {} as Record<string, string>);
@@ -67,3 +80,12 @@ export function parseDateFromISO(date: string) {
     8
   )}`;
 }
+
+export function getArg(argName: argNames) {
+  return process.argv
+    .slice(2)
+    .find((arg) => arg.startsWith(`${argName}=`))
+    ?.split("=")[1];
+}
+
+export const TEMP_BATCH_FILE = "./unprocessed_batches.json";

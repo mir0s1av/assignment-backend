@@ -18,9 +18,10 @@ export const GovUKDataSchema = z.object({
   transaction_number: z.string(),
   amount: z.string().transform((val) => {
     const cleaned = val.replace(",", "");
+
     return parseFloat(cleaned).toFixed(2);
   }),
-  description: z.string(),
+  description: z.string().optional(),
   supplier_postcode: z.string().optional(), // Some suppliers might not have a postcode
 });
 
@@ -36,3 +37,11 @@ export const SpendTransactionSchema = z.object({
 });
 
 export type SpendTransaction = z.infer<typeof SpendTransactionSchema>;
+
+export type argNames =
+  | "year"
+  | "url"
+  | "filePath"
+  | "mode"
+  | "batchSize"
+  | "folderPath";

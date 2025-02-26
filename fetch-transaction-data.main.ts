@@ -1,4 +1,4 @@
-import { months } from "./utils";
+import { getArg, months } from "./utils";
 import path from "path";
 import fs from "fs";
 import https from "https";
@@ -27,7 +27,12 @@ async function downloadFile(url: string, savePath: string): Promise<void> {
 }
 
 //TODO: it would be beneficial to run this process in parallel
-async function main(url: string, year: number) {
+async function main(
+  url: string,
+  year: number,
+  folderPath: string = "./sample_data",
+  recursive?: boolean
+) {
   try {
     for (const month of months) {
       const apiUrl = `${url}-${month}-${year}`;
@@ -46,11 +51,18 @@ async function main(url: string, year: number) {
       }
 
       const fileName = path.basename(fileUrl);
-      const savePath = path.join("./sample_data", fileName);
+
+      if (!fs.existsSync(folderPath)) {
+        console.log("Creating folder: " + folderPath);
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+      const savePath = path.join(folderPath, fileName);
 
       await downloadFile(fileUrl, savePath);
     }
-    main(url, year + 1);
+    if (recursive) {
+      main(url, year + 1);
+    }
   } catch (error) {
     console.error(
       `Failed to download files for ${url}: ${year} year`,
@@ -60,7 +72,17 @@ async function main(url: string, year: number) {
   }
 }
 
+const modeArg = getArg("mode");
+const urlArg = getArg("url");
+const yearArg = getArg("year");
+const folderPathArg = getArg("folderPath");
+
+if (!urlArg || !yearArg) {
+  throw new Error("Please provide urlArg and yearArg");
+}
 main(
-  "https://www.gov.uk/api/content/government/publications/dft-spending-over-25000",
-  2021
+  urlArg,
+  parseInt(yearArg),
+  folderPathArg,
+  modeArg === "recursive" ? true : false
 );
