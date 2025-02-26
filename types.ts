@@ -1,18 +1,24 @@
 import { z } from "zod";
+import { parseDate } from "./utils";
 // Common data format of _some_ of the spend files.
 // Might have to support other formats in the future but this is ok for HMRC & DfT
 export const GovUKDataSchema = z.object({
   department_family: z.string(),
   entity: z.string(),
-  date: z.string(),
+  date: z.string().transform((date) => {
+    const parsedDate = parseDate(date);
+    if (!parsedDate) {
+      throw new Error(`Invalid date: ${date}`);
+    }
+    return parsedDate;
+  }),
   expense_type: z.string(),
   expense_area: z.string(),
   supplier: z.string(),
   transaction_number: z.string(),
   amount: z.string().transform((val) => {
     const cleaned = val.replace(",", "");
-    const num = parseFloat(cleaned).toFixed(2);
-    return num;
+    return parseFloat(cleaned).toFixed(2);
   }),
   description: z.string(),
   supplier_postcode: z.string().optional(), // Some suppliers might not have a postcode

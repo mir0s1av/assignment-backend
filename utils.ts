@@ -4,10 +4,9 @@ export function transformKeys(obj: unknown) {
   if (typeof obj !== "object" || obj === null) {
     throw new Error("Invalid input: Expected an object.");
   }
-  return Object.keys(obj).reduce((acc, key) => {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
     const newKey = key.toLowerCase().replace(" ", "_");
-    const val = (obj as Record<string, string>)[key];
-    acc[newKey] = val;
+    acc[newKey] = value;
     return acc;
   }, {} as Record<string, string>);
 }

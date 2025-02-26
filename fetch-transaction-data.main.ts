@@ -1,18 +1,26 @@
 import { months } from "./utils";
 import path from "path";
 import fs from "fs";
-
+import https from "https";
 async function downloadFile(url: string, savePath: string): Promise<void> {
   try {
-    console.log(`Downloading file: ${url}`);
-    const response = await fetch(url);
-    if (!response.ok)
-      throw new Error(`Failed to fetch file: ${response.statusText}`);
-    console.log(`File downloaded: ${savePath}`);
-    const buffer = await response.arrayBuffer();
+    if (!fs.existsSync(savePath)) {
+      const filename = path.basename(savePath);
+      console.log(`Downloading file: ${url}`);
+      https.get(url, (response) => {
+        const fileStream = fs.createWriteStream(savePath);
+        response.pipe(fileStream);
+        fileStream.on("finish", () => {
+          console.log(
+            "Data has been written to the destination file. :: " + filename
+          );
+        });
 
-    fs.writeFileSync(savePath, Buffer.from(buffer));
-    console.log(`File saved: ${savePath}`);
+        fileStream.on("error", (err) => {
+          console.error("Error writing to the destination file:", err);
+        });
+      });
+    }
   } catch (error) {
     console.error(`Failed to download ${url}:`, (error as Error).message);
   }
