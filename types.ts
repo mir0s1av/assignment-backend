@@ -45,3 +45,12 @@ export type argNames =
   | "mode"
   | "batchSize"
   | "folderPath";
+
+export const TopSuppliersDtoSchema = z.object({
+  buyer_name: z.string().optional(),
+  limit: z.number().default(5),
+  from_date: z.string({ message: "Please provide 'from_date'!!!" }),
+  to_date: z.string({ message: "Please provide 'to_date'!!!" }),
+});
+
+export type TopSuppliersDto = z.infer<typeof TopSuppliersDtoSchema>;

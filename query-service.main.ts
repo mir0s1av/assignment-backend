@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import { getDBConnection } from "./db";
 
 import { parseDateFromISO } from "./utils";
+import { TopSuppliersDtoSchema } from "./types";
 
 /**
  * This file has little structure and doesn't represent production quality code.
@@ -100,11 +101,11 @@ app.post("/api/top_suppliers", async (_req, _res, next) => {
   try {
     const knexDb = await getDBConnection();
 
-    //TODOL Add body validation
     const body = _req.body;
-    const { buyer_name, from_date, to_date, limit = 5 } = body;
+    const { buyer_name, from_date, to_date, limit } =
+      TopSuppliersDtoSchema.parse(body);
     if (!from_date || !to_date) {
-      throw new Error("from_date and to_date must be specified");
+      throw new Error("🚨 from_date and to_date must be specified");
     }
     let baseQuery = knexDb("spend_transactions")
       .select("supplier_name as name")
@@ -112,17 +113,17 @@ app.post("/api/top_suppliers", async (_req, _res, next) => {
         parseDateFromISO(from_date),
         parseDateFromISO(to_date),
       ])
-      .sum("amount as total");
+      .sum("amount as total")
+      .groupBy("supplier_name")
+      .orderBy("total", "desc")
+      .limit(limit);
 
     if (buyer_name) {
       baseQuery = baseQuery.where("buyer_name", buyer_name);
     }
 
-    const results = await baseQuery
-      .groupBy("supplier_name")
-      .orderBy("total", "desc")
-      .limit(limit);
-    console.log({ results });
+    const results = await baseQuery;
+    knexDb.destroy();
     return _res.json({ top_suppliers: results });
   } catch (err) {
     next(err);

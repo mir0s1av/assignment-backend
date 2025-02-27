@@ -23,7 +23,7 @@ async function processBatches(
       (batch.length > 0 && now - lastPersistTime >= 1000)
     ) {
       const batchToPersist = batch.splice(0, batchSize);
-      console.log(`Persisting batch :: ${batchToPersist.length}`);
+      console.log(`🚀 Persisting batch :: ${batchToPersist.length}`);
       isProcessing = true;
       await knexDb.batchInsert(
         "spend_transactions",
@@ -34,7 +34,6 @@ async function processBatches(
       lastPersistTime = Date.now();
       isProcessing = false;
     }
-    console.log({ totalPRocessed });
   }, 500);
 }
 
@@ -122,7 +121,7 @@ async function listener(folderPath: string, batchSize: number = 100) {
     console.log("Creating folder: " + folderPath);
     fs.mkdirSync(folderPath, { recursive: true });
   }
-  console.log("Listening to folder :: " + folderPath);
+  console.log("👂 Listening to folder :: " + folderPath);
   const knexDb = await getDBConnection();
 
   let batch: SpendTransaction[] = await loadUnprocessedBatches();
@@ -134,7 +133,7 @@ async function listener(folderPath: string, batchSize: number = 100) {
       // Check if it's a new file (exists in the directory)
       if (fs.existsSync(filePath)) {
         console.log(`🆕 New file added: ${fileName}`);
-        console.log(`Reading ${filePath}.`);
+        console.log(`📖 Reading ${fileName}.`);
         const csvContent = fs.createReadStream(filePath, { encoding: "utf8" });
         await parseCSVFile(csvContent, batch);
       }
@@ -182,12 +181,12 @@ const folderPathArg = getArg("folderPath");
 try {
   if (modeArg === "listener") {
     if (!folderPathArg) {
-      throw new Error("Please provide folderPathArg");
+      throw new Error("🚨 folderPathArg is missing");
     }
     listener(folderPathArg, batchSizeArg ? parseInt(batchSizeArg) : undefined);
   } else {
     if (!filePathArg) {
-      throw new Error("Please provide filePathArg");
+      throw new Error("🚨 filePathArg is missing");
     }
     loadFile(filePathArg, batchSizeArg ? parseInt(batchSizeArg) : undefined);
   }
