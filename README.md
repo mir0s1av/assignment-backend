@@ -147,3 +147,11 @@ TODO Tasks:
 6.  `load-file.main` can run in synchronous mode allowing us watch a folder for newly added files and perform data injestion accordingly.
 7.  We can update `fetch-transaction-data` and implement a mode when files are fetched only for the provided year and not recursively.
 8.  use `createWriteStream` instead of `writeFileSync`
+
+We can now run `load-file.main` in tow modes: `listener` and normal
+
+    `listener` mode can be run like so `npm run dev-load-file mode=listener folderPath=<path_to_folder>` :: `folderPath` arg is set to point the folder for the listening, if folder doesn't exist it will be auto created. Once a fail is added to this folder it will be processed automaticaly( added to db and then deleted).
+
+    `normal` mode can be run like so `npm run dev-load-file filePath=<path_to_file>`.
+
+We can also run `fetch-transaction-data.main` in two modes. Depending on if you provide an additional argument `mode=recursive` it will fetch all files starting from the provided year `year=2022`. If `mode` is not provided, only files for the year specified will be fetched. Example of a cmd `npm run dev-fetch-transaction-data year=2024 folderPath=./sample_data/test url=https://www.gov.uk/api/content/government/publications/dft-spending-over-25000 mode=recursive`
