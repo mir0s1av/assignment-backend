@@ -1,5 +1,15 @@
 import { DateTime } from "luxon";
-import { argNames } from "./types";
+import {
+  argNames,
+  EventSchemaType,
+  GovUKDataSchema,
+  SpendTransaction,
+  SpendTransactionSchema,
+} from "./types";
+import { parseAmount } from "./scraperUtils";
+import { HMRCCrawler } from "./crawler/crawlers/hmrc.crawler";
+
+import { readFileSync, writeFileSync } from "fs";
 
 export function transformKeys(obj: unknown) {
   if (typeof obj !== "object" || obj === null) {
@@ -25,6 +35,8 @@ export function transformKeys(obj: unknown) {
 }
 
 export const dateFormats = [
+  "dd-MM-yyyy",
+  "dd.MM.yyyy",
   "yyyy",
   "yyyy-MM",
   "yyyyMM",
@@ -81,11 +93,61 @@ export function parseDateFromISO(date: string) {
   )}`;
 }
 
-export function getArg(argName: argNames) {
+export function getArg<T extends string>(argName: argNames) {
   return process.argv
     .slice(2)
     .find((arg) => arg.startsWith(`${argName}=`))
-    ?.split("=")[1];
+    ?.split("=")[1] as T;
 }
 
 export const TEMP_BATCH_FILE = "./unprocessed_batches.json";
+export const mapGovUKData = (
+  row: Papa.ParseStepResult<unknown>
+): SpendTransaction => {
+  const parsedKeysData = transformKeys(row.data);
+  const data = GovUKDataSchema.parse(parsedKeysData);
+  return {
+    buyer_name: data.entity,
+    supplier_name: data.supplier,
+    amount: parseAmount(data.amount),
+    transaction_timestamp: data.date,
+  };
+};
+
+const crawlerClassesData = {
+  hmrc: HMRCCrawler,
+};
+export const selector = (key: keyof typeof crawlerClassesData) => {
+  return crawlerClassesData[key];
+};
+
+export const mappingSchema = {
+  govUKdata: {
+    func: mapGovUKData,
+    table: "spend_transactions" as const,
+    schema: SpendTransactionSchema,
+  },
+  whatEver: {
+    func: mapGovUKData,
+    table: "something_else" as const,
+    schema: SpendTransactionSchema,
+  },
+};
+export const selectorMappingSchema = (key: keyof typeof mappingSchema) => {
+  return mappingSchema[key];
+};
+export const appendToEvents = (filePath: string, event: EventSchemaType) => {
+  let existingData: EventSchemaType[] = [];
+  try {
+    existingData = JSON.parse(readFileSync(filePath, "utf-8"));
+    if (!Array.isArray(existingData)) {
+      existingData = [];
+    }
+  } catch (error) {
+    console.log("No existing file found, creating a new one...");
+  }
+
+  existingData.push(event);
+
+  writeFileSync(filePath, JSON.stringify(existingData, null, 2), "utf-8");
+};
