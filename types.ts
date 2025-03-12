@@ -15,15 +15,16 @@ export const GovUKDataSchema = z.object({
   }),
   expense_type: z.string(),
   expense_area: z.string().optional(),
-  supplier: z.string(),
-  transaction_number: z.string(),
+  supplier: z.string().min(1, "Supplier name cannot be empty"),
+  transaction_number: z.string().min(1, "Transaction number cannot be empty"),
   amount: z.string().transform((val) => {
-    const cleaned = val.replace(",", "");
-
-    return parseFloat(isNaN(parseInt(cleaned)) ? "0" : cleaned).toFixed(2);
+    const cleaned = val.replace(/[^0-9.-]/g, "");
+    const parsed = parseFloat(cleaned); 
+  
+    return isNaN(parsed) ? "0.00" : parsed.toFixed(2); 
   }),
   description: z.string().optional(),
-  supplier_postcode: z.string().optional(), // Some suppliers might not have a postcode
+  supplier_postcode: z.string().optional(),
 });
 
 export type GovUKData = z.infer<typeof GovUKDataSchema>;
@@ -31,13 +32,13 @@ export type GovUKData = z.infer<typeof GovUKDataSchema>;
 export const SpendTransactionSchema = z.object({
   buyer_name: z.string(),
   supplier_name: z.string(),
-  amount: z.number().positive("Amount must be a positive number"),
+  amount: z.number(),
   transaction_timestamp: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid ISO timestamp",
   }),
 });
 
-export type SpendTransaction = z.infer<typeof SpendTransactionSchema>;
+export type SpendTransactionType = z.infer<typeof SpendTransactionSchema>;
 
 export type argNames =
   | "year"
@@ -57,34 +58,64 @@ export const TopSuppliersDtoSchema = z.object({
 
 export type TopSuppliersDto = z.infer<typeof TopSuppliersDtoSchema>;
 
-export const FilePrsingSchema = ["hmrc.govUKdata", "nhs.whatEver"] as const;
-export type FileParsingSchemaType = (typeof FilePrsingSchema)[number];
-export const eventTypeDescription = ["file_created", "file_parsed"] as const;
-export const EventSchema = z.object({
-  type: z.enum(eventTypeDescription),
-  id: z.string(),
-  timestamp: z.string(),
-  metadata: z.object({
-    file: z.object({
-      name: z.string(),
-      path: z.string(),
-      url: z.string(),
-      parse_schema: z.enum(FilePrsingSchema),
-    }),
-  }),
+export const FileParsingSchema = ["govUKdata"] as const;
+export type FileParsingSchemaType = (typeof FileParsingSchema)[number];
+
+export const EventTypebaseSchema = z.object({
+  eventType: z.enum(["job_created", "file_created", "batch_created"]),
+  timestamp: z.string().default(new Date().toISOString()),
+  eventId: z.string(),
+  batchSize: z.number().default(1000),
+
+})
+
+
+export const CrawlJobSchema = z.object({
+  url: z.string(),
+  year: z.number(),
+  crawlerType: z.enum(["hmrc"]),
+  recursive: z.boolean().default(false),
+  
 });
 
-export type EventSchemaType = z.infer<typeof EventSchema>;
+export type CrawlJobType = z.infer<typeof CrawlJobSchema>;
 
-const BatchTypeSchema = z.object({
-  id: z.string(),
-  metadata: z.object({
-    batch_data: z.array(
-      z.union([SpendTransactionSchema, TopSuppliersDtoSchema])
-    ),
-    database: z.enum(["spend_transactions"]),
-    created_at: z.string(),
-  }),
+export const ParseFileJobSchema = z.object({
+  filePath: z.string(),
+  parse_schema: z.enum(FileParsingSchema),
+})
+
+
+export const JobCreatedEventSchema = EventTypebaseSchema.extend({
+  
+  metadata: z.union([CrawlJobSchema, ParseFileJobSchema])
 });
 
-export type BatchSchemaType = z.infer<typeof BatchTypeSchema>;
+export type JobCreatedEventType = z.infer<typeof JobCreatedEventSchema>;
+
+const FileSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  parse_schema: z.enum(FileParsingSchema),
+})
+
+export const FileCreatedEventSchema = EventTypebaseSchema.extend({
+  metadata: z.object({
+    jobId: z.string(),
+    file: FileSchema,
+  })
+});
+
+export type FileCreatedEventType = z.infer<typeof FileCreatedEventSchema>;
+
+export const BatchCreatedEventSchema = EventTypebaseSchema.extend({
+  metadata: z.object({
+    file: FileSchema,
+    batchId: z.string(),
+    table: z.enum(["spend_transactions"]),
+    batch: z.array(SpendTransactionSchema)
+  
+  })
+});
+
+export type BatchCreatedEventType = z.infer<typeof BatchCreatedEventSchema>;

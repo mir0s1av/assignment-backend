@@ -2,7 +2,11 @@ import express, { NextFunction, Request, Response } from "express";
 import { getDBConnection } from "./db";
 
 import { parseDateFromISO } from "./utils";
-import { TopSuppliersDtoSchema } from "./types";
+import { CrawlJobSchema, ParseFileJobSchema, TopSuppliersDtoSchema } from "./types";
+import { randomUUID } from "crypto";
+import RabbitMQClient from "./rabbitmq/client";
+import { JobsProducer } from "./rabbitmq/producers/jobs.producer";
+
 
 /**
  * This file has little structure and doesn't represent production quality code.
@@ -65,6 +69,50 @@ type SupplierStatsResponse = {
   total_transaction_value: number;
 };
 
+app.post("/api/create_job", async (req, res, next) => {
+  const jobsProducer = JobsProducer.getInstance(
+    await RabbitMQClient.getChannel()
+  );
+
+  try {
+
+    const { batchSize,filePath } = req.body;
+
+    const jobId = randomUUID();
+    const metadata = filePath ? ParseFileJobSchema.parse(req.body) : CrawlJobSchema.parse(req.body);
+    jobsProducer.produceMessage({
+      eventId: jobId,
+      timestamp: new Date().toISOString(),
+      eventType: "job_created",
+      batchSize,
+      metadata,
+    });
+
+    res.status(201).json({ jobId });
+  } catch (err) {
+    next(err);
+  }
+});
+app.get("/api/files",async (req, res, next)=>{
+  try {
+    const knexDb = await getDBConnection();
+    const result = await knexDb("parsed_files").select("*");
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+})
+app.delete("/api/files/:id", async (req, res, next) => {
+  try {
+    const knexDb = await getDBConnection();
+    const result = await knexDb("parsed_files").where({
+      id: req.params.id
+    }).delete();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+})
 /**
  * This operation returns stats for a specific supplier.
  */
@@ -140,7 +188,9 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-app.listen(app.get("port"), () => {
+app.listen(app.get("port"), async () => {
+  RabbitMQClient.initialize();
+
   console.log("  App is running at http://localhost:%d", app.get("port"));
   console.log("  Press CTRL-C to stop\n");
 });

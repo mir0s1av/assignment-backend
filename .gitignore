@@ -1,4 +1,7 @@
 node_modules/
 *.sqlite3
 *.json
+/sample_data/*
+migrations/*.sql
+.env
 events

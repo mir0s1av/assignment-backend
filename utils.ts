@@ -1,15 +1,16 @@
 import { DateTime } from "luxon";
 import {
   argNames,
-  EventSchemaType,
+  FileParsingSchema,
   GovUKDataSchema,
-  SpendTransaction,
+  SpendTransactionType,
   SpendTransactionSchema,
 } from "./types";
 import { parseAmount } from "./scraperUtils";
 import { HMRCCrawler } from "./crawler/crawlers/hmrc.crawler";
 
-import { readFileSync, writeFileSync } from "fs";
+
+import z, { ZodSchema } from "zod";
 
 export function transformKeys(obj: unknown) {
   if (typeof obj !== "object" || obj === null) {
@@ -101,9 +102,22 @@ export function getArg<T extends string>(argName: argNames) {
 }
 
 export const TEMP_BATCH_FILE = "./unprocessed_batches.json";
+
+
+export const crawlerClassesData = {
+  hmrc: HMRCCrawler,
+};
+export const selector = (key: keyof typeof crawlerClassesData) => {
+  return crawlerClassesData[key];
+};
+
+interface MappingConfig<T extends ZodSchema> {
+  func: (row: Papa.ParseStepResult<unknown>) => z.infer<T>;
+  table: 'spend_transactions';
+}
 export const mapGovUKData = (
   row: Papa.ParseStepResult<unknown>
-): SpendTransaction => {
+): SpendTransactionType => {
   const parsedKeysData = transformKeys(row.data);
   const data = GovUKDataSchema.parse(parsedKeysData);
   return {
@@ -113,41 +127,15 @@ export const mapGovUKData = (
     transaction_timestamp: data.date,
   };
 };
-
-const crawlerClassesData = {
-  hmrc: HMRCCrawler,
-};
-export const selector = (key: keyof typeof crawlerClassesData) => {
-  return crawlerClassesData[key];
-};
-
-export const mappingSchema = {
-  govUKdata: {
+const mappingConfigs = new Map<typeof FileParsingSchema[number], MappingConfig<typeof SpendTransactionSchema>>([
+  ['govUKdata', {
     func: mapGovUKData,
-    table: "spend_transactions" as const,
-    schema: SpendTransactionSchema,
-  },
-  whatEver: {
-    func: mapGovUKData,
-    table: "something_else" as const,
-    schema: SpendTransactionSchema,
-  },
-};
-export const selectorMappingSchema = (key: keyof typeof mappingSchema) => {
-  return mappingSchema[key];
-};
-export const appendToEvents = (filePath: string, event: EventSchemaType) => {
-  let existingData: EventSchemaType[] = [];
-  try {
-    existingData = JSON.parse(readFileSync(filePath, "utf-8"));
-    if (!Array.isArray(existingData)) {
-      existingData = [];
-    }
-  } catch (error) {
-    console.log("No existing file found, creating a new one...");
-  }
+    table: 'spend_transactions',
+  }]
+]);
 
-  existingData.push(event);
-
-  writeFileSync(filePath, JSON.stringify(existingData, null, 2), "utf-8");
-};
+export function getMapping(key: typeof FileParsingSchema[number]) {
+  const config = mappingConfigs.get(key);
+  if (!config) throw new Error(`No mapping config found for key: ${key}`);
+  return config;
+}
